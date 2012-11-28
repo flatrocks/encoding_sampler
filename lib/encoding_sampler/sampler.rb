@@ -42,6 +42,10 @@ module EncodingSampler
       encodings.inject({}) {|hash, encoding| hash.merge! encoding => diffed_sample(encoding)}
     end
   
+    def unique_diffed_samples
+      diffed_samples(unique_valid_encodings.collect {|encoding_group| encoding_group.first})
+    end
+  
   private
    
     def initialize(file_name, encodings, diff_options = {})
