@@ -14,10 +14,8 @@ without asking the user.
 EncodingSampler determines collects a reasonably (but not rigorously) minimal sample by reading the file line-by-line, dismissing encodings that are invalid, and collecting a sample of (binary) lines where different encodings yield different results.  Each pair of encodings is considered identical until a line is found that translates differently between the two encodings.  When the sampling is complete, all the encodings are grouped with other encoding(s) yield identical decoding results.
 
 When sampling is complete, there are three possible results:
-* There may be no valid encodings.  This could mean that none of the proposed encodings match the file, 
-but often it means the file is simply malformed.  This is generally what you will see if you try to 
-determine the encoding of a non-text binary file.
-* There may be only one group of valid encodings, which all yield the same decoded data.  In this case there are no samples to look at because there are no encodings to differentiate between.
+* There may be no valid encodings.  This could mean that none of the proposed encodings match the file, but often it means the file is simply malformed.  This is generally what you will see if you try to determine the encoding of a non-text binary file.
+* There may be only one group of valid encodings, all of which yield the same decoded data.  In this case there are no samples to look at because there are no encodings to differentiate between.
 * There may be more than one set of valid encodings, each if which yields a different decoded data.  In this case the samples are available so a user can determine which is the correct interpretation.
 
 ## Performance
