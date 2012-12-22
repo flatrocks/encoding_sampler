@@ -91,6 +91,21 @@ Once you have an instance of an EncodingSampler, you can use the objects instanc
     "ISO-8859-15"=>["<span class=\"difference\">€</span>ABCDEFabcdef0123456789<span class=\"difference\">€</span>ABCDEFabcdef0123456789<span class=\"difference\">€</span>"]}
     irb(main):006:0>
 
+For example, diffed samples could be displayed as:
+<table>
+<tr>
+  <th>ASCII-8BIT</th>
+  <td><span style='color:red;font-weight:bold;'>?</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>?</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>?</span>"</td>
+</tr>
+<tr>
+  <th>ISO-8859-</th>
+  <td><span style='color:red;font-weight:bold;'>¤</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>¤</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>¤</span>"</td>
+</tr>
+  <th>ISO-8859-15</th>
+  <td><span style='color:red;font-weight:bold;'>€</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>€</span>ABCDEFabcdef0123456789<span class=\"difference\">€</span>"</td>
+</tr>
+</table>
+
 ## Contributing
 
 1. Fork it
