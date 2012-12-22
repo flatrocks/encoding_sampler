@@ -95,14 +95,14 @@ For example, diffed samples could be displayed as:
 <table>
 <tr>
   <th>ASCII-8BIT</th>
-  <td><span style='color:red;font-weight:bold;'>?</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>?</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>?</span>"</td>
+  <td><span style='color:red;font-weight:bold;'>?</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>?</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>?</span></td>
 </tr>
 <tr>
   <th>ISO-8859-</th>
-  <td><span style='color:red;font-weight:bold;'>¤</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>¤</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>¤</span>"</td>
+  <td><span style='color:red;font-weight:bold;'>¤</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>¤</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>¤</span></td>
 </tr>
   <th>ISO-8859-15</th>
-  <td><span style='color:red;font-weight:bold;'>€</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>€</span>ABCDEFabcdef0123456789<span class=\"difference\">€</span>"</td>
+  <td><span style='color:red;font-weight:bold;'>€</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>€</span>ABCDEFabcdef0123456789<span style='color:red;font-weight:bold;'>€</span></td>
 </tr>
 </table>
 
