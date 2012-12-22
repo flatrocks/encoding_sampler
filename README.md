@@ -11,29 +11,18 @@ but it's impossible to tell whether the character __0xA4__ should be displayed a
 generic currency symbol (&curren;) using ISO-8859-1 or as a Euro symbol (&euro;) using ISO-8859-15
 without asking the user.
 
-EncodingSampler determines which encodings collects a minimal sample by reading the file line-by-line, dismissing encodings that are invalid,
-and collecting a sample of lines where different encodings yield different results.
+EncodingSampler determines collects a reasonably (but not rigorously) minimal sample by reading the file line-by-line, dismissing encodings that are invalid, and collecting a sample of (binary) lines where different encodings yield different results.  Each pair of encodings is considered identical until a line is found that translates differently between the two encodings.  When the sampling is complete, all the encodings are grouped with other encoding(s) yield identical decoding results.
 
 When sampling is complete, there are three possible results:
 * There may be no valid encodings.  This could mean that none of the proposed encodings match the file, 
 but often it means the file is simply malformed.  This is generally what you will see if you try to 
 determine the encoding of a non-text binary file.
-* There may be only one valid encoding
+* There may be only one group of valid encodings, which all yield the same decoded data.  In this case there are no samples to look at because there are no encodings to differentiate between.
+* There may be more than one set of valid encodings, each if which yields a different decoded data.  In this case the samples are available so a user can determine which is the correct interpretation.
 
-It works by reading a file line-by line, collecting a minimum set of sample lines that will let a user
-see the differences between the various proposed encodings.  The result is a Hash where:  
-* keys are Arrays of names of apparently-equivalent encodings (that is, encodings that yield identical 
-results for the specified file), and...
-* values are arrays containing the minimum number of "decoded" strings (file lines) that will visually differentiate
-the encodings.  
-The values can be presented to a user to choose which os the intended encoding.
+## Performance
 
-Because this method works by reading file lines and "decoding" each line with all the remaining valid encodings,
-it can be slow.  In the general case where more than one encoding is syntactically valid, the entire file
-must be read to find that there are no differences.  This happens a lot since a 7-bit ASCII file 
-will generally (always?) be valid and produce identical results for all encodings.
-
-there are 164!! for Ruby 1.9.2
+Because this method works by reading file lines and "decoding" each line with all the remaining valid encodings, it can be slow. Starting with a broad range of valid encodings can make it slower.  At this writing, Ruby 1.9.2 supports 164 encodings!  It's recommended to try and use a much smaller set.
 
 ## Installation
 
@@ -51,21 +40,53 @@ Or install it yourself as:
 
 ## Usage
 
+Creating a new EncodingSampler instantiates a new instance and completes the file analysis.
+
     EncodingSampler.new(file_name, options = {}} → new_encoding_sampler
     
-options:
-  :difference_start => 
-  :difference_end =>
+    options:
+      :difference_start => 
+      :difference_end =>
 
+Once you have an instance of an EncodingSampler, you can use the objects instance methods to determine which encodings are valid, which are unique (that is, which yeield unique results,) and get samples to compare the differences visually.  For example, imagining you have a file that turns out to be ISO-8859-15 (which includes the Euro sign,) you might bet these results:
 
-Example:Say you have a file that contains one line
+    sampler = EncodingSampler.new('some/file.txt', ['ASCII-8BIT', 'ISO-8859-1', 'ISO-8859-15', 'WINDOWS-1252', 'UTF-8'])
 
-    EncodingSampler.samples('/fiel/name.here', ['US-ASCII', 'ISO-8859-1', 'ISO-8859-15' 'UTF-8'])
-_yields..._
-    {
-      ['ISO-8859-1', 'ISO-8859-15'] => 'some lines here']
-      ['ISO-8859-1', 'ISO-8859-15'] => 'some lines here']
-    }
+    #Create a sampler:
+
+    irb(main):001:0> sampler = EncodingSampler::Sampler.new(Rails.root.join('spec/fixtures/file_encoding_survey_test_files/ISO-8859-15.txt').to_s, ['ASCII-8BIT', 'UTF-8', 'ISO-8859-1', 'ISO-8859-15'])
+    => #<EncodingSampler::Sampler:0x007f979592ea30 @diff_options={}, @filename="/Users/tomwilson/rollnorocks/aptana_workspace/t2s-admin/spec/fixtures/file_encoding_survey_test_files/ISO-8859-15.txt", @binary_samples={1=>"\xA4ABCDEFabcdef0123456789\xA4ABCDEFabcdef0123456789\xA4"}, @unique_valid_encodings=[["ASCII-8BIT"], ["ISO-8859-1"], ["ISO-8859-15"]]>
+
+    # Query for valid and unique encodings:    
+
+    irb(main):002:0> sampler.valid_encodings
+    => ["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"]
+
+    irb(main):003:0> sampler.unique_valid_encodings
+    => [["ASCII-8BIT"], ["ISO-8859-1"], ["ISO-8859-15"]]
+
+    # Now the payoff.  Samples for each encoding:
+
+    irb(main):004:0> sampler.sample('ASCII-8BIT')
+    => ["?ABCDEFabcdef0123456789?ABCDEFabcdef0123456789?"]
+
+    irb(main):005:0> sampler.sample('ISO-8859-1')
+    => ["¤ABCDEFabcdef0123456789¤ABCDEFabcdef0123456789¤"]
+
+    irb(main):006:0> sampler.sample('ISO-8859-15')
+    => ["€ABCDEFabcdef0123456789€ABCDEFabcdef0123456789€"]
+
+    # Or you can request them all at once:
+
+    irb(main):016:0> sampler.samples(["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"])
+    => {"ASCII-8BIT"=>["?ABCDEFabcdef0123456789?ABCDEFabcdef0123456789?"], 
+      "ISO-8859-1"=>["¤ABCDEFabcdef0123456789¤ABCDEFabcdef0123456789¤"], 
+      "ISO-8859-15"=>["€ABCDEFabcdef0123456789€ABCDEFabcdef0123456789€"]}
+
+    # Finally, you can "diff" the results so it's easy to see the differences:
+    
+    irb(main):017:0> sampler.diffed_samples(["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"])
+
 
 ## Contributing
 

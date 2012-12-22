@@ -1,5 +1,6 @@
 require 'encoding_sampler/version'
 require 'encoding_sampler/diff_callbacks'
+require 'diff-lcs'
 
 module EncodingSampler
   
@@ -17,12 +18,12 @@ module EncodingSampler
       @binary_samples.values.map {|line| decode_binary_string(line, encoding)}
     end
     
-    # returns a hash of samples, keyed by encoding
+    # Returns a hash of samples, keyed by encoding
     def samples(encodings = valid_encodings)
       encodings.inject({}) {|hash, encoding| hash.merge! encoding => sample(encoding)}
     end
     
-    # assumes shortest strings are most likely to be correct
+    # Assumes shortest strings are most likely to be correct
     def best_encodings
       candidates = samples(unique_valid_encodings.collect {|encoding_group| encoding_group.first})
       min_length = candidates.values.collect {|ary| ary.join('').size}.min
