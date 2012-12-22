@@ -4,12 +4,21 @@ EncodingSampler helps solve the problem of what to do when you don't know the ch
 It was initially created tosolve the typical problem of selecting an appropriate encoding for an uploaded user
 file where the user also has no idea of the encoding (or typically, even what "character encoding" means.)
 
-The solution works under the assumption that for a given file, sometimes encodings can be dismissed automatically,
-but in the general case you have to let the user see the differences and choose.
-For example, it's easy to determine that an 8-bit character is _not_ encoded as US_ASCII because it is simply invalid.
-However, it's impossible to tell whether the character __0xA4__ should be displayed as a 
+For a given file, some encodings may be dismissed out of hand because they would result in invalid
+characters or sequences.  However, in the general case you have to let the user see the differences and choose.
+For example, it's easy to determine that an 8-bit character is _not_ encoded as US_ASCII because it is simply invalid, 
+but it's impossible to tell whether the character __0xA4__ should be displayed as a 
 generic currency symbol (&curren;) using ISO-8859-1 or as a Euro symbol (&euro;) using ISO-8859-15
 without asking the user.
+
+EncodingSampler determines which encodings collects a minimal sample by reading the file line-by-line, dismissing encodings that are invalid,
+and collecting a sample of lines where different encodings yield different results.
+
+When sampling is complete, there are three possible results:
+* There may be no valid encodings.  This could mean that none of the proposed encodings match the file, 
+but often it means the file is simply malformed.  This is generally what you will see if you try to 
+determine the encoding of a non-text binary file.
+* There may be only one valid encoding
 
 It works by reading a file line-by line, collecting a minimum set of sample lines that will let a user
 see the differences between the various proposed encodings.  The result is a Hash where:  
@@ -42,7 +51,14 @@ Or install it yourself as:
 
 ## Usage
 
-Using EncodingSampler is easy.  Say you have a file that contains one line
+    EncodingSampler.new(file_name, options = {}} → new_encoding_sampler
+    
+options:
+  :difference_start => 
+  :difference_end =>
+
+
+Example:Say you have a file that contains one line
 
     EncodingSampler.samples('/fiel/name.here', ['US-ASCII', 'ISO-8859-1', 'ISO-8859-15' 'UTF-8'])
 _yields..._

@@ -7,11 +7,12 @@ module EncodingSampler
     
     attr_accessor :filename, :unique_valid_encodings
     
+    # All valid encodings.  
     def valid_encodings
-      @unique_valid_encodings.flatten
+      unique_valid_encodings.flatten
     end
     
-    # sample is an array of file lines, encoded by encoding
+    # An array of sample file lines, decoded by _encoding_
     def sample(encoding)
       @binary_samples.values.map {|line| decode_binary_string(line, encoding)}
     end
