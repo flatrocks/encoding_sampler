@@ -83,10 +83,15 @@ Once you have an instance of an EncodingSampler, you can use the objects instanc
       "ISO-8859-1"=>["¤ABCDEFabcdef0123456789¤ABCDEFabcdef0123456789¤"], 
       "ISO-8859-15"=>["€ABCDEFabcdef0123456789€ABCDEFabcdef0123456789€"]}
 
-    # Finally, you can "diff" the results so it's easy to see the differences:
-    
-    irb(main):017:0> sampler.diffed_samples(["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"])
+    # Finally, you can "diff" the results so it's easy to see the differences.  
+    # (This looks like a mess here, but included in an html page with proper CSS, 
+    # it displays the results in a way that highlights the differences.)
 
+    irb(main):005:0> sampler.diffed_samples(["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"])
+    => {"ASCII-8BIT"=>["<span class=\"difference\">?</span>ABCDEFabcdef0123456789<span class=\"difference\">?</span>ABCDEFabcdef0123456789<span class=\"difference\">?</span>"], 
+    "ISO-8859-1"=>["<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>"], 
+    "ISO-8859-15"=>["<span class=\"difference\">€</span>ABCDEFabcdef0123456789<span class=\"difference\">€</span>ABCDEFabcdef0123456789<span class=\"difference\">€</span>"]}
+    irb(main):006:0>
 
 ## Contributing
 
