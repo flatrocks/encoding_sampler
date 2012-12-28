@@ -14,4 +14,6 @@ Gem::Specification.new do |gem|
   gem.name          = "encoding_sampler"
   gem.require_paths = ["lib"]
   gem.version       = EncodingSampler::VERSION
+
+  gem.add_dependency('diff-lcs', '1.1.3')
 end
