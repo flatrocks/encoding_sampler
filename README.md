@@ -87,18 +87,18 @@ Finally, you can "diff" the results so it's easy to see the differences.
     irb(main):006:0>
 
 For example, diffed samples could be displayed as:
-<style>span.difference {font-weight:bold; color:#ff0000;}</style>
+
 <table>
 <tr>
   <th>ASCII-8BIT</th>
-  <td><span class="difference">?</span>ABCDEFabcdef0123456789<span class="difference">?</span>ABCDEFabcdef0123456789<span class="difference">?</span></td>
+  <td><span style="font-weight:bold; color:#ff0000;">?</span>ABCDEFabcdef0123456789<span style="font-weight:bold; color:#ff0000;">?</span>ABCDEFabcdef0123456789<span style="font-weight:bold; color:#ff0000;">?</span></td>
 </tr>
 <tr>
   <th>ISO-8859-1</th>
-  <td><span class="difference">¤</span>ABCDEFabcdef0123456789<span class="difference">¤</span>ABCDEFabcdef0123456789<span class="difference">¤</span></td>
+  <td><span style="font-weight:bold; color:#ff0000;">¤</span>ABCDEFabcdef0123456789<span style="font-weight:bold; color:#ff0000;">¤</span>ABCDEFabcdef0123456789<span style="font-weight:bold; color:#ff0000;">¤</span></td>
 </tr>
   <th>ISO-8859-15</th>
-  <td><span class="difference">€</span>ABCDEFabcdef0123456789<span class="difference">€</span>ABCDEFabcdef0123456789<span class="difference">€</span></td>
+  <td><span style="font-weight:bold; color:#ff0000;">€</span>ABCDEFabcdef0123456789<span style="font-weight:bold; color:#ff0000;">€</span>ABCDEFabcdef0123456789<span style="font-weight:bold; color:#ff0000;">€</span></td>
 </tr>
 </table>
 
