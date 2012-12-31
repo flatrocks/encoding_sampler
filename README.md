@@ -20,7 +20,7 @@ When sampling is complete, there are three possible results:
 
 ## Performance
 
-Because this method works by reading file lines and "decoding" each line with all the remaining valid encodings, it can be slow. Starting with a broad range of valid encodings can make it slower.  At this writing, Ruby 1.9.2 supports 164 encodings!  It's recommended to try and use a much smaller set.
+Because this method works by reading file lines and "decoding" each line with all the remaining valid encodings, it can be slow. Starting with a broad range of valid encodings can make it slower.  At this writing, Ruby 1.9.3 supports 168 encodings!  It's recommended to try and use a much smaller set.
 
 ## Installation
 
@@ -46,25 +46,20 @@ Creating a new EncodingSampler instantiates a new instance and completes the fil
       :difference_start => 
       :difference_end =>
 
-Once you have an instance of an EncodingSampler, you can use the objects instance methods to determine which encodings are valid, which are unique (that is, which yeield unique results,) and get samples to compare the differences visually.  For example, imagining you have a file that turns out to be ISO-8859-15 (which includes the Euro sign,) you might bet these results:
+Once you have an instance of an EncodingSampler, you can use the objects instance methods to determine which encodings are valid, which are unique (that is, which yield unique results,) and get samples to compare the differences visually.  For example, imagining you have a file that turns out to be ISO-8859-15 (which includes the Euro sign,) you might get these results:
 
-    sampler = EncodingSampler.new('some/file.txt', ['ASCII-8BIT', 'ISO-8859-1', 'ISO-8859-15', 'WINDOWS-1252', 'UTF-8'])
-
-    #Create a sampler:
-
+Create a sampler:
     irb(main):001:0> sampler = EncodingSampler::Sampler.new(Rails.root.join('spec/fixtures/file_encoding_survey_test_files/ISO-8859-15.txt').to_s, ['ASCII-8BIT', 'UTF-8', 'ISO-8859-1', 'ISO-8859-15'])
     => #<EncodingSampler::Sampler:0x007f979592ea30 @diff_options={}, @filename="/Users/tomwilson/rollnorocks/aptana_workspace/t2s-admin/spec/fixtures/file_encoding_survey_test_files/ISO-8859-15.txt", @binary_samples={1=>"\xA4ABCDEFabcdef0123456789\xA4ABCDEFabcdef0123456789\xA4"}, @unique_valid_encodings=[["ASCII-8BIT"], ["ISO-8859-1"], ["ISO-8859-15"]]>
 
-    # Query for valid and unique encodings:    
-
+Query for valid and unique encodings:    
     irb(main):002:0> sampler.valid_encodings
     => ["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"]
 
     irb(main):003:0> sampler.unique_valid_encodings
     => [["ASCII-8BIT"], ["ISO-8859-1"], ["ISO-8859-15"]]
 
-    # Now the payoff.  Samples for each encoding:
-
+Now the payoff.  Samples for each encoding, individually or collectively:
     irb(main):004:0> sampler.sample('ASCII-8BIT')
     => ["?ABCDEFabcdef0123456789?ABCDEFabcdef0123456789?"]
 
@@ -74,17 +69,13 @@ Once you have an instance of an EncodingSampler, you can use the objects instanc
     irb(main):006:0> sampler.sample('ISO-8859-15')
     => ["€ABCDEFabcdef0123456789€ABCDEFabcdef0123456789€"]
 
-    # Or you can request them all at once:
-
     irb(main):016:0> sampler.samples(["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"])
     => {"ASCII-8BIT"=>["?ABCDEFabcdef0123456789?ABCDEFabcdef0123456789?"], 
       "ISO-8859-1"=>["¤ABCDEFabcdef0123456789¤ABCDEFabcdef0123456789¤"], 
       "ISO-8859-15"=>["€ABCDEFabcdef0123456789€ABCDEFabcdef0123456789€"]}
 
-    # Finally, you can "diff" the results so it's easy to see the differences.  
-    # (This looks like a mess here, but included in an html page with proper CSS, 
-    # it displays the results in a way that highlights the differences.)
-
+Finally, you can "diff" the results so it's easy to see the differences.  
+(This looks like a mess here, but included in an html page with proper CSS, it displays the results in a way that highlights the differences.)
     irb(main):005:0> sampler.diffed_samples(["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"])
     => {"ASCII-8BIT"=>["<span class=\"difference\">?</span>ABCDEFabcdef0123456789<span class=\"difference\">?</span>ABCDEFabcdef0123456789<span class=\"difference\">?</span>"], 
     "ISO-8859-1"=>["<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>"], 
@@ -92,17 +83,18 @@ Once you have an instance of an EncodingSampler, you can use the objects instanc
     irb(main):006:0>
 
 For example, diffed samples could be displayed as:
+<style>span.difference {font-weight:bold; color:#ff0000;}</style>
 <table>
 <tr>
   <th>ASCII-8BIT</th>
-  <td><b>?</b>ABCDEFabcdef0123456789<b>?</b>ABCDEFabcdef0123456789<b>?</b></td>
+  <td><span class="difference">?</span>ABCDEFabcdef0123456789<span class="difference">?</span>ABCDEFabcdef0123456789<span class="difference">?</span></td>
 </tr>
 <tr>
   <th>ISO-8859-1</th>
-  <td><b>¤</b>ABCDEFabcdef0123456789<b>¤</b>ABCDEFabcdef0123456789<b>¤</b></td>
+  <td><span class="difference">¤</span>ABCDEFabcdef0123456789<span class="difference">¤</span>ABCDEFabcdef0123456789<span class="difference">¤</span></td>
 </tr>
   <th>ISO-8859-15</th>
-  <td><b>€</b>ABCDEFabcdef0123456789<b>€</b>ABCDEFabcdef0123456789<b>€</b></td>
+  <td><span class="difference">€</span>ABCDEFabcdef0123456789<span class="difference">€</span>ABCDEFabcdef0123456789<span class="difference">€</span></td>
 </tr>
 </table>
 
