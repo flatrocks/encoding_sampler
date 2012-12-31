@@ -49,10 +49,12 @@ Creating a new EncodingSampler instantiates a new instance and completes the fil
 Once you have an instance of an EncodingSampler, you can use the objects instance methods to determine which encodings are valid, which are unique (that is, which yield unique results,) and get samples to compare the differences visually.  For example, imagining you have a file that turns out to be ISO-8859-15 (which includes the Euro sign,) you might get these results:
 
 Create a sampler:
+
     irb(main):001:0> sampler = EncodingSampler::Sampler.new(Rails.root.join('spec/fixtures/file_encoding_survey_test_files/ISO-8859-15.txt').to_s, ['ASCII-8BIT', 'UTF-8', 'ISO-8859-1', 'ISO-8859-15'])
     => #<EncodingSampler::Sampler:0x007f979592ea30 @diff_options={}, @filename="/Users/tomwilson/rollnorocks/aptana_workspace/t2s-admin/spec/fixtures/file_encoding_survey_test_files/ISO-8859-15.txt", @binary_samples={1=>"\xA4ABCDEFabcdef0123456789\xA4ABCDEFabcdef0123456789\xA4"}, @unique_valid_encodings=[["ASCII-8BIT"], ["ISO-8859-1"], ["ISO-8859-15"]]>
 
-Query for valid and unique encodings:    
+Query for valid and unique encodings:
+
     irb(main):002:0> sampler.valid_encodings
     => ["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"]
 
@@ -60,6 +62,7 @@ Query for valid and unique encodings:
     => [["ASCII-8BIT"], ["ISO-8859-1"], ["ISO-8859-15"]]
 
 Now the payoff.  Samples for each encoding, individually or collectively:
+
     irb(main):004:0> sampler.sample('ASCII-8BIT')
     => ["?ABCDEFabcdef0123456789?ABCDEFabcdef0123456789?"]
 
@@ -76,6 +79,7 @@ Now the payoff.  Samples for each encoding, individually or collectively:
 
 Finally, you can "diff" the results so it's easy to see the differences.  
 (This looks like a mess here, but included in an html page with proper CSS, it displays the results in a way that highlights the differences.)
+
     irb(main):005:0> sampler.diffed_samples(["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"])
     => {"ASCII-8BIT"=>["<span class=\"difference\">?</span>ABCDEFabcdef0123456789<span class=\"difference\">?</span>ABCDEFabcdef0123456789<span class=\"difference\">?</span>"], 
     "ISO-8859-1"=>["<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>"], 
