@@ -3,66 +3,58 @@ require "spec_helper.rb"
 include EncodingSampler
 
 describe Sampler do
-  context 'with stubs' do
+  context 'with fakefs', fakefs: true do
     before(:each) do
-      # create a functional double for file object
-      @file = double('file')
-      @file.stub(:readline) {|*args| @file.eof? ? raise(EOFError.new) : "#{@fake_lines[(@readline_counter += 1) - 1]}" }
-      @file.stub(:lineno) {|*args| @readline_counter }    
-      @file.stub(:lineno=) {|*args| @readline_counter = args[0] }    
-      @file.stub(:eof?, :eof) {|*args| @readline_counter >= @fake_lines.size }
-      # make it work enough like a file
-      @readline_counter = 0
-      @fake_lines = %w(a b c)
-      # and use it in place of a file   
-      File.stub(:open) {|*args, &block| loop { block.call(@file) }}
-    end  
+      @filedir = '/test'
+      @filename = '/test/testfile'
+      @lines = %w(one two three four five)
+      FileUtils.mkdir(@filedir) unless Dir.exists?(@filedir)
+      File.open(@filename, "w") do |f|
+        @lines.each do |line|
+          f.puts line
+        end
+      end
+    end
     
-    describe 'file double' do
+    describe 'verifying fakefs' do
       
-      it 'can fake open and readline without error' do
+      it 'can open and readline without error' do
         expect {
-          File.open('args here') do |file|
-            break if file.eof?          
-            file.readline
+          File.open(@filename, 'r') do |file|
+            until file.eof?          
+              file.readline
+            end
           end
         }.to_not raise_error
       end    
       
       it 'raises EOFError when readline called past eof' do
         expect {
-          File.open('args here') do |file|
-            # break if file.eof? ...NOT!      
+          File.open(@filename, 'r') do |file|
+            until file.eof?          
+              file.readline
+            end
             file.readline
           end
         }.to raise_error(EOFError)
       end     
       
-      it 'readline returns fake_lines elements, setting eof? when finished' do
+      it 'readline returns lines' do
         lines_read = []
-        File.open('args here') do |file|
-          break if file.eof?
-          lines_read << file.readline
+        File.open(@filename, 'r') do |file|
+          until file.eof?          
+            lines_read << file.readline.chomp
+          end
         end
-        lines_read.should eq @fake_lines
-      end
-      
-      it 'lineno returns the right value' do
-        linenos = []
-        File.open('args here') do |file|
-          break if file.eof?
-          linenos << file.lineno
-          file.readline
-        end
-        linenos.should eq @fake_lines.size.times.to_a
-      end    
-  
+        lines_read.should eq @lines
+      end  
+
     end
     
     describe 'creation' do
       
       it 'works with required arguments' do
-        Sampler.new('some_file_name', []).should be_a Sampler
+        Sampler.new(@filename, []).should be_a Sampler
       end
       
       it 'requires a filename' do
@@ -70,28 +62,28 @@ describe Sampler do
       end
       
       it 'requires encodings' do
-        expect {Sampler.new('filename_here')}.to raise_error
+        expect {Sampler.new(@filename)}.to raise_error
       end
       
       it 'passes error raised on File.open' do
         File.stub(:open).and_raise 'some error'
-        expect {Sampler.new('filename_here', [])}.to raise_error('some error')
+        expect {Sampler.new(@filename, [])}.to raise_error('some error')
       end
       
       it 'passes error raised on file.readline' do
-        @file.stub(:readline).and_raise 'some error'
-        expect {Sampler.new('filename_here', [])}.to raise_error('some error')
+        File.any_instance.stub(:readline).and_raise 'some error'
+        expect {Sampler.new(@filename, [])}.to raise_error('some error')
       end                
       
     end
     
     describe '#unique_valid_encodings' do
       before(:each) do
-        @fake_lines = ['one', 'two', 'three']
         Sampler.any_instance.stub(:decode_binary_string) do |*args|
-          case args[1]
-          when 'ENCODING1', 'LIKE_ENCODING1' then args[0]
-          else args[0].gsub(/t/, 'T')
+          if ['ENCODING1', 'LIKE_ENCODING1'].include? args[1]
+            args[0]
+          else 
+            args[0].gsub(/t/, 'T')
           end
         end
       end
@@ -119,8 +111,8 @@ describe Sampler do
       
       context 'when there are no lines read' do
         before(:each) do        
-          @fake_lines = []
-          @sampler = Sampler.new('fake_file_name', %w(ENCODING1 LIKE_ENCODING1 UNLIKE_ENCODING1))        
+          File.any_instance.stub(:eof?).and_return true
+          @sampler = Sampler.new(@filename, %w(ENCODING1 LIKE_ENCODING1 UNLIKE_ENCODING1))        
         end
         
         it_behaves_like 'unique_valid_encodings format is correct'
@@ -134,11 +126,10 @@ describe Sampler do
         end
        
       end
-      
   
       context 'when all encodings work the same' do
         before(:each) do
-          @sampler = Sampler.new('fake_file_name', %w(ENCODING1 LIKE_ENCODING1))
+          @sampler = Sampler.new(@filename, %w(ENCODING1 LIKE_ENCODING1))
         end
         
         it_behaves_like 'unique_valid_encodings format is correct'      
@@ -153,9 +144,9 @@ describe Sampler do
   
       end
       
-      context 'when encoding are different' do
+      context 'when encodings are different' do
         before(:each) do
-          @sampler = Sampler.new('fake_file_name', %w(ENCODING1 UNLIKE_ENCODING1))
+          @sampler = Sampler.new(@filename, %w(ENCODING1 UNLIKE_ENCODING1))
         end
         
         it_behaves_like 'unique_valid_encodings format is correct'      
@@ -181,11 +172,11 @@ describe Sampler do
    
     describe '#sample' do
       before(:each) do
-        @fake_lines = ['one', 'two', 'three']
         Sampler.any_instance.stub(:decode_binary_string) do |*args|
-          case args[1]
-          when 'ENCODING1', 'LIKE_ENCODING1' then args[0]
-          else args[0].gsub(/t/, 'T')
+          if ['ENCODING1', 'LIKE_ENCODING1'].include? args[1]
+            args[0]
+          else 
+            args[0].gsub(/t/, 'T')
           end
         end
       end
@@ -208,8 +199,8 @@ describe Sampler do
       
       context 'when there are no lines read' do
         before(:each) do        
-          @fake_lines = []
-          @sampler = Sampler.new('fake_file_name', %w(ENCODING1 LIKE_ENCODING1 UNLIKE_ENCODING1))        
+          File.any_instance.stub(:eof?).and_return true
+          @sampler = Sampler.new(@filename, %w(ENCODING1 LIKE_ENCODING1 UNLIKE_ENCODING1))        
         end
         
         it_behaves_like 'sample format is correct'
@@ -225,7 +216,7 @@ describe Sampler do
   
       context 'when all encodings work the same' do
         before(:each) do
-          @sampler = Sampler.new('fake_file_name', %w(ENCODING1 LIKE_ENCODING1))
+          @sampler = Sampler.new(@filename, %w(ENCODING1 LIKE_ENCODING1))
         end
         
         it_behaves_like 'sample format is correct'      
@@ -240,7 +231,7 @@ describe Sampler do
       
       context 'when encoding are different' do
         before(:each) do
-          @sampler = Sampler.new('fake_file_name', %w(ENCODING1 UNLIKE_ENCODING1))
+          @sampler = Sampler.new(@filename, %w(ENCODING1 UNLIKE_ENCODING1))
         end
         
         it_behaves_like 'sample format is correct'      
@@ -260,19 +251,19 @@ describe Sampler do
     
     describe '#samples' do
       before(:each) do
-        @fake_lines = ['one', 'two', 'three']
         Sampler.any_instance.stub(:decode_binary_string) do |*args|
-          case args[1]
-          when 'ENCODING1', 'LIKE_ENCODING1' then args[0]
-          else args[0].gsub(/t/, 'T')
+          if ['ENCODING1', 'LIKE_ENCODING1'].include? args[1]
+            args[0]
+          else 
+            args[0].gsub(/t/, 'T')
           end
         end
       end
       
       context 'when there are no lines read' do
         before(:each) do        
-          @fake_lines = []
-          @sampler = Sampler.new('fake_file_name', %w(ENCODING1 LIKE_ENCODING1 UNLIKE_ENCODING1))        
+          File.any_instance.stub(:eof?).and_return true
+          @sampler = Sampler.new(@filename, %w(ENCODING1 LIKE_ENCODING1 UNLIKE_ENCODING1))        
         end
         
         it 'each included sample is empty' do
@@ -284,7 +275,7 @@ describe Sampler do
   
       context 'when all encodings work the same' do
         before(:each) do
-          @sampler = Sampler.new('fake_file_name', %w(ENCODING1 LIKE_ENCODING1))
+          @sampler = Sampler.new(@filename, %w(ENCODING1 LIKE_ENCODING1))
         end
         
         it 'each included sample is empty' do
@@ -295,7 +286,7 @@ describe Sampler do
       
       context 'when encoding are different' do
         before(:each) do
-          @sampler = Sampler.new('fake_file_name', %w(ENCODING1 UNLIKE_ENCODING1))
+          @sampler = Sampler.new(@filename, %w(ENCODING1 UNLIKE_ENCODING1))
         end     
         
         it 'it is not empty' do
@@ -328,14 +319,14 @@ describe Sampler do
     
     describe 'diffed_sample' do
       before(:each) do
-        @fake_lines = ['the cat', 'in the hat', 'comes back']
         Sampler.any_instance.stub(:decode_binary_string) do |*args|
-          case args[1]
-          when 'ENCODING1', 'LIKE_ENCODING1' then args[0]
-          else args[0].gsub(/t/, 'T') # force different faked encoding for letter 't'
+          if ['ENCODING1', 'LIKE_ENCODING1'].include? args[1]
+            args[0]
+          else 
+            args[0].gsub(/t/, 'T')
           end
         end
-        @sampler = Sampler.new('fake_file_name', %w(ENCODING1 LIKE_ENCODING1 UNLIKE_ENCODING1))          
+        @sampler = Sampler.new(@filename, %w(ENCODING1 LIKE_ENCODING1 UNLIKE_ENCODING1))          
       end
     
       it 'works' do
@@ -364,18 +355,18 @@ describe Sampler do
    
     describe 'diffed_samples' do
       before(:each) do
-        @fake_lines = ['the cat', 'in the hat', 'comes back']
         Sampler.any_instance.stub(:decode_binary_string) do |*args|
-          case args[1]
-          when 'ENCODING1', 'LIKE_ENCODING1' then args[0]
-          else args[0].gsub(/t/, 'T') # force different faked encoding for letter 't'
+          if ['ENCODING1', 'LIKE_ENCODING1'].include? args[1]
+            args[0]
+          else 
+            args[0].gsub(/t/, 'T')
           end
         end
       end
       
       context 'with default options' do
         before(:each) do
-          @sampler = Sampler.new('fake_file_name', %w(ENCODING1 LIKE_ENCODING1 UNLIKE_ENCODING1)) 
+          @sampler = Sampler.new(@filename, %w(ENCODING1 LIKE_ENCODING1 UNLIKE_ENCODING1)) 
         end
     
         it 'works' do
@@ -385,7 +376,7 @@ describe Sampler do
         it 'returns a hash' do
           # note: two different encodings that express different results only takes one sample
           @sampler.diffed_samples(['ENCODING1']).should be_a Hash
-        end      
+        end          
         
         it 'keys match encodings in argument' do
           # note: two different encodings that express different results only takes one sample
@@ -399,7 +390,7 @@ describe Sampler do
       
       context 'with custom :difference_start, :difference_end options' do
         before(:each) do
-          @sampler = Sampler.new('fake_file_name', %w(ENCODING1 LIKE_ENCODING1 UNLIKE_ENCODING1), difference_start: '<start>', difference_end: '<end>') 
+          @sampler = Sampler.new(@filename, %w(ENCODING1 LIKE_ENCODING1 UNLIKE_ENCODING1), difference_start: '<start>', difference_end: '<end>') 
         end
         
         it 'uses difference_start value specified in options hash' do
@@ -416,8 +407,7 @@ describe Sampler do
     
     describe '#best_encodings' do
       before(:each) do
-        @fake_lines = ['the cat', 'in the hat', 'comes back']
-        Sampler.any_instance.stub(:decode_binary_string) do |*args|
+       Sampler.any_instance.stub(:decode_binary_string) do |*args|
           case args[1]
           when 'SHORTEST_ENCODING' then args[0]
           when 'LIKE_SHORTEST_ENCODING' then args[0].reverse # same length and different is all that matters
@@ -429,7 +419,7 @@ describe Sampler do
       
       context 'no valid encodings' do
         before(:each) do
-          @sampler = Sampler.new('fake_file_name', %w(INVALID_ENCODING))  
+          @sampler = Sampler.new(@filename, %w(INVALID_ENCODING))  
         end
         it 'returns empty array' do
           @sampler.best_encodings.should eq []
@@ -438,7 +428,7 @@ describe Sampler do
       
       context 'one valid encoding' do
         before(:each) do
-          @sampler = Sampler.new('fake_file_name', %w(SHORTEST_ENCODING))  
+          @sampler = Sampler.new(@filename, %w(SHORTEST_ENCODING))  
         end
         it 'returns an array with the one shortest encoding' do 
           @sampler.best_encodings.should eq ['SHORTEST_ENCODING']
@@ -447,7 +437,7 @@ describe Sampler do
             
       context 'when one shortest encoding' do
         before(:each) do
-          @sampler = Sampler.new('fake_file_name', %w(SHORTEST_ENCODING LONGER_ENCODING))  
+          @sampler = Sampler.new(@filename, %w(SHORTEST_ENCODING LONGER_ENCODING))  
         end
         it 'returns an array with the one shortest encoding' do
           @sampler.best_encodings.should eq ['SHORTEST_ENCODING']
@@ -456,7 +446,7 @@ describe Sampler do
       
       context 'when more than one shortest encoding' do
         before(:each) do
-          @sampler = Sampler.new('fake_file_name', %w(SHORTEST_ENCODING LIKE_SHORTEST_ENCODING LONGER_ENCODING))  
+          @sampler = Sampler.new(@filename, %w(SHORTEST_ENCODING LIKE_SHORTEST_ENCODING LONGER_ENCODING))  
         end
         it 'returns an array with the shortest encodings' do
           @sampler.best_encodings.should eq ['SHORTEST_ENCODING', 'LIKE_SHORTEST_ENCODING']

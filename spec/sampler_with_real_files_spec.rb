@@ -11,6 +11,9 @@ describe Sampler do
       @special_chars = "\u20AC\u201C\u201d\u00A1\u00A2\u00A3\u00A9\u00AE\u00C4\u00C5\u00E4\u00E5"
       @ascii_chars = "ABCDEFabcdef0123456789"
       @mixed_lines = []
+      3.times do 
+        @mixed_lines << @ascii_chars # first line the same for all
+      end
       (0..(@special_chars.length - 1)).each do |i|
         @mixed_lines << @special_chars.chars.to_a[i] + @ascii_chars + @special_chars.chars.to_a[i] + @ascii_chars + @special_chars.chars.to_a[i] 
       end

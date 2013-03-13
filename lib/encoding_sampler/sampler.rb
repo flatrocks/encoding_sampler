@@ -60,22 +60,22 @@ module EncodingSampler
       
       # read the entire file to verify encodings and collect samples for comparison of encodings
       File.open(@filename, 'rb') do |file|
-        break if file.eof?
-        binary_line = file.readline.strip
-        decoded_lines = multi_decode_binary_string(binary_line, encodings)
+        until file.eof?
+          binary_line = file.readline.strip
+          decoded_lines = multi_decode_binary_string(binary_line, encodings)
 
-        # eliminate any newly-invalid encodings from the scope
-        decoded_lines.select {|encoding, decoded_line| decoded_line.nil?}.keys.each do |invalid_encoding|
-          encodings.delete invalid_encoding
-          solutions.delete_if {|pair, lineno| pair.include? invalid_encoding}
-          @binary_samples.keep_if {|id, string| solutions.keys.flatten.include? id}
-        end        
-        
-        # add sample_id to solutions when smaple sample when binary string decodes differently for two encodings
-        solutions.select {|pair, lineno| lineno.nil?}.keys.each do |unsolved_pair|
-          solutions[unsolved_pair], @binary_samples[file.lineno] = file.lineno, binary_line if decoded_lines[unsolved_pair[0]] != decoded_lines[unsolved_pair[1]]
+          # eliminate any newly-invalid encodings from the scope
+          decoded_lines.select {|encoding, decoded_line| decoded_line.nil?}.keys.each do |invalid_encoding|
+            encodings.delete invalid_encoding
+            solutions.delete_if {|pair, lineno| pair.include? invalid_encoding}
+            @binary_samples.keep_if {|id, string| solutions.keys.flatten.include? id}
+          end        
+          
+          # add sample_id to solutions when smaple sample when binary string decodes differently for two encodings
+          solutions.select {|pair, lineno| lineno.nil?}.keys.each do |unsolved_pair|
+            solutions[unsolved_pair], @binary_samples[file.lineno] = file.lineno, binary_line if decoded_lines[unsolved_pair[0]] != decoded_lines[unsolved_pair[1]]
+          end
         end
-        
       end
       
       # combine to groups
