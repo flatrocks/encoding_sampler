@@ -89,13 +89,8 @@ module EncodingSampler
     end
     
     def decode_binary_string(binary_string, encoding)
-      begin
-        encoded_string = binary_string.dup.force_encoding(encoding)
-        raise unless encoded_string.valid_encoding?
-        encoded_string.encode('UTF-8', invalid: :replace, undef: :replace, replace: '?')
-      rescue
-        nil
-      end
+      encoded_string = binary_string.dup.force_encoding(encoding)
+      encoded_string.valid_encoding? ? encoded_string.encode('UTF-8', invalid: :replace, undef: :replace, replace: '?') : nil
     end
     
     def multi_decode_binary_string(binary_string, encodings)
