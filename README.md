@@ -53,7 +53,7 @@ Once you have an instance of an EncodingSampler, you can use the objects instanc
     # After the Sampler is created, there's no additional file processing overhead.
     sampler = EncodingSampler::Sampler.new(
       'some/file/name.csv', 
-      ['ASCII-8BIT', 'UTF-8', 'ISO-8859-1', 'ISO-8859-2, 'ISO-8859-15'])
+      ['ASCII-8BIT', 'UTF-8', 'ISO-8859-1', 'ISO-8859-2', 'ISO-8859-15'])
 
     # List valid encodings
     sampler.valid_encodings
