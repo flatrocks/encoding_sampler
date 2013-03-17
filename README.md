@@ -1,7 +1,7 @@
 # EncodingSampler
 
 EncodingSampler helps solve the problem of what to do when you don't know the character encoding of a file.
-It was initially created tosolve the typical problem of selecting an appropriate encoding for an uploaded user
+It was initially created to solve the typical problem of selecting an appropriate encoding for an uploaded user
 file where the user also has no idea of the encoding (or typically, even what "character encoding" means.)
 
 For a given file, some encodings may be dismissed out of hand because they would result in invalid
@@ -11,16 +11,16 @@ but it's impossible to tell whether the character __0xA4__ should be displayed a
 generic currency symbol (&curren;) using ISO-8859-1 or as a Euro symbol (&euro;) using ISO-8859-15
 without asking the user.
 
-EncodingSampler determines collects a reasonably (but not rigorously) minimal sample by reading the file line-by-line, dismissing encodings that are invalid, and collecting a sample of (binary) lines where different encodings yield different results.  Each pair of encodings is considered identical until a line is found that translates differently between the two encodings.  When the sampling is complete, all the encodings are grouped with other encoding(s) yield identical decoding results.
+EncodingSampler solves the problem by collecting a reasonably (but not rigorously) minimal sample by reading the file line-by-line.  Lines that demonstrate the difference between any pair of encodings are noted, and when a line is encountered that cannot be "decoded" with a specific encoding, that encoding is considered invalid and removed from the running.  When the sampling is complete, each encoding is grouped with other encoding(s) that yield identical decoding results.
 
-When sampling is complete, there are three possible results:
+There are three possible results:
 * There may be no valid encodings.  This could mean that none of the proposed encodings match the file, but often it means the file is simply malformed.  This is generally what you will see if you try to determine the encoding of a non-text binary file.
-* There may be only one group of valid encodings, all of which yield the same decoded data.  In this case there are no samples to look at because there are no encodings to differentiate between.
-* There may be more than one set of valid encodings, each if which yields a different decoded data.  In this case the samples are available so a user can determine which is the correct interpretation.
+* There may be only one group of valid encodings, all of which yield the same decoded data.  In this case there are no samples to look at because there are no encodings to differentiate between.  A straight ASCII file may yield this result for many encodings.
+* There may be more than one set of valid encodings, each if which yields a different decoded data.  This is the interesting case!  Then samples will be available so a user can visually determine which is the correct interpretation.  The "diff-lcs" gem is used to diff the samples, providing a simple way to highlight the (usually few) differences.
 
 ## Performance
 
-Because this method works by reading file lines and "decoding" each line with all the remaining valid encodings, it can be slow. Starting with a broad range of valid encodings can make it slower.  At this writing, Ruby 1.9.3 supports 168 encodings!  It's recommended to try and use a much smaller set.
+Because this method works by reading file lines and "decoding" each line with all the remaining valid encodings, it can be slow. For most files, the number of line "decodings" will equal the number of lines in the file times the number of encodings tested, and at this writing, Ruby 1.9.3 supports 168 encodings!  It's recommended to try and use a much smaller set.
 
 ## Installation
 
@@ -50,43 +50,40 @@ Once you have an instance of an EncodingSampler, you can use the objects instanc
 
 Create a sampler:
 
-    irb(main):001:0> sampler = EncodingSampler::Sampler.new(Rails.root.join('spec/fixtures/file_encoding_survey_test_files/ISO-8859-15.txt').to_s, ['ASCII-8BIT', 'UTF-8', 'ISO-8859-1', 'ISO-8859-15'])
-    => #<EncodingSampler::Sampler:0x007f979592ea30 @diff_options={}, @filename="/Users/tomwilson/rollnorocks/aptana_workspace/t2s-admin/spec/fixtures/file_encoding_survey_test_files/ISO-8859-15.txt", @binary_samples={1=>"\xA4ABCDEFabcdef0123456789\xA4ABCDEFabcdef0123456789\xA4"}, @unique_valid_encodings=[["ASCII-8BIT"], ["ISO-8859-1"], ["ISO-8859-15"]]>
+    # Args: file name, array of encodings.
+    # The heavy lifting is done during Sampler is initialization.
+    sampler = EncodingSampler::Sampler.new(
+      'some/file/name.csv', 
+      ['ASCII-8BIT', 'UTF-8', 'ISO-8859-1', 'ISO-8859-15'])
 
-Query for valid and unique encodings:
+    # List valid encodings
+    sampler.valid_encodings            
+            # ["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"]
 
-    irb(main):002:0> sampler.valid_encodings
-    => ["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"]
+    # Valid encodings grouped together where
+    sampler.unique_valid_encodings
+            # [["ASCII-8BIT"], ["ISO-8859-1"], ["ISO-8859-15"]]
 
-    irb(main):003:0> sampler.unique_valid_encodings
-    => [["ASCII-8BIT"], ["ISO-8859-1"], ["ISO-8859-15"]]
+    # Now the payoff.  Samples for each encoding, individually...
+    sampler.sample('ASCII-8BIT')
+            # ["?ABCDEFabcdef0123456789?ABCDEFabcdef0123456789?"]
+    sampler.sample('ISO-8859-1')
+            # ["¤ABCDEFabcdef0123456789¤ABCDEFabcdef0123456789¤"]
+    sampler.sample('ISO-8859-15')
+            # ["€ABCDEFabcdef0123456789€ABCDEFabcdef0123456789€"]
+    # or all together...
+    sampler.samples(["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"])
+            # {"ASCII-8BIT"=>["?ABCDEFabcdef0123456789?ABCDEFabcdef0123456789?"], 
+            #   "ISO-8859-1"=>["¤ABCDEFabcdef0123456789¤ABCDEFabcdef0123456789¤"], 
+            #   "ISO-8859-15"=>["€ABCDEFabcdef0123456789€ABCDEFabcdef0123456789€"]}
 
-Now the payoff.  Samples for each encoding, individually or collectively:
+    # Finally, you can "diff" the results so it's easy to see the differences:
+    sampler.diffed_samples(["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"])
+            # {"ASCII-8BIT"=>["<span class=\"difference\">?</span>ABCDEFabcdef0123456789<span class=\"difference\">?</span>ABCDEFabcdef0123456789<span class=\"difference\">?</span>"], 
+            #   "ISO-8859-1"=>["<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>"], 
+            #   "ISO-8859-15"=>["<span class=\"difference\">€</span>ABCDEFabcdef0123456789<span class=\"difference\">€</span>ABCDEFabcdef0123456789<span class=\"difference\">€</span>"]}
 
-    irb(main):004:0> sampler.sample('ASCII-8BIT')
-    => ["?ABCDEFabcdef0123456789?ABCDEFabcdef0123456789?"]
-
-    irb(main):005:0> sampler.sample('ISO-8859-1')
-    => ["¤ABCDEFabcdef0123456789¤ABCDEFabcdef0123456789¤"]
-
-    irb(main):006:0> sampler.sample('ISO-8859-15')
-    => ["€ABCDEFabcdef0123456789€ABCDEFabcdef0123456789€"]
-
-    irb(main):016:0> sampler.samples(["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"])
-    => {"ASCII-8BIT"=>["?ABCDEFabcdef0123456789?ABCDEFabcdef0123456789?"], 
-      "ISO-8859-1"=>["¤ABCDEFabcdef0123456789¤ABCDEFabcdef0123456789¤"], 
-      "ISO-8859-15"=>["€ABCDEFabcdef0123456789€ABCDEFabcdef0123456789€"]}
-
-Finally, you can "diff" the results so it's easy to see the differences.  
-(This looks like a mess here, but included in an html page with proper CSS, it displays the results in a way that highlights the differences.)
-
-    irb(main):005:0> sampler.diffed_samples(["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"])
-    => {"ASCII-8BIT"=>["<span class=\"difference\">?</span>ABCDEFabcdef0123456789<span class=\"difference\">?</span>ABCDEFabcdef0123456789<span class=\"difference\">?</span>"], 
-    "ISO-8859-1"=>["<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>"], 
-    "ISO-8859-15"=>["<span class=\"difference\">€</span>ABCDEFabcdef0123456789<span class=\"difference\">€</span>ABCDEFabcdef0123456789<span class=\"difference\">€</span>"]}
-    irb(main):006:0>
-
-For example, diffed samples could be displayed as:
+In raw form the __diffed_samples__ don't seem impressive, but they can display the resuls via HTML, for example, to highlight and clarify the differences:
 
 <table>
 <tr>
