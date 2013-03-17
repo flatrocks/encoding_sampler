@@ -48,24 +48,23 @@ Creating a new EncodingSampler instantiates a new instance and completes the fil
 
 Once you have an instance of an EncodingSampler, you can use the objects instance methods to determine which encodings are valid, which are unique (that is, which yield unique results,) and get samples to compare the differences visually.  For example, imagining you have a file that turns out to be ISO-8859-15 (which includes the Euro sign,) you might get these results:
 
-Create a sampler:
-
 ```ruby
-    # Args: file name, array of encodings.
-    # The heavy lifting is done during Sampler is initialization.
+    # Create a new sampler. The heavy lifting is done at initialization.
+    # After the Sampler is created, there's no additional file processing overhead.
     sampler = EncodingSampler::Sampler.new(
       'some/file/name.csv', 
-      ['ASCII-8BIT', 'UTF-8', 'ISO-8859-1', 'ISO-8859-15'])
+      ['ASCII-8BIT', 'UTF-8', 'ISO-8859-1', 'ISO-8859-2, 'ISO-8859-15'])
 
     # List valid encodings
-    sampler.valid_encodings            
-            # ["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"]
+    sampler.valid_encodings
+            # ["ASCII-8BIT", "ISO-8859-1","ISO-8859-2", "ISO-8859-15"]
+            # (UTF-8 was dropped because it was invliad for one or more lines in the sample file.)
 
-    # Valid encodings grouped together where
     sampler.unique_valid_encodings
-            # [["ASCII-8BIT"], ["ISO-8859-1"], ["ISO-8859-15"]]
+            # [["ASCII-8BIT"], ["ISO-8859-1", 'ISO-8859-2'], ["ISO-8859-15"]]
+            # (ISO-8859-1 and ISO-8859-2 are grouped tegether because they yielded identical decoding results.)
 
-    # Now the payoff.  Samples for each encoding, individually...
+    # The payoff: samples for each encoding, individually...
     sampler.sample('ASCII-8BIT')
             # ["?ABCDEFabcdef0123456789?ABCDEFabcdef0123456789?"]
     sampler.sample('ISO-8859-1')
