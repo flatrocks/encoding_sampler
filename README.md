@@ -50,6 +50,7 @@ Once you have an instance of an EncodingSampler, you can use the objects instanc
 
 Create a sampler:
 
+```ruby
     # Args: file name, array of encodings.
     # The heavy lifting is done during Sampler is initialization.
     sampler = EncodingSampler::Sampler.new(
@@ -83,7 +84,7 @@ Create a sampler:
             #   "ISO-8859-1"=>["<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>"], 
             #   "ISO-8859-15"=>["<span class=\"difference\">€</span>ABCDEFabcdef0123456789<span class=\"difference\">€</span>ABCDEFabcdef0123456789<span class=\"difference\">€</span>"]}
 
-In raw form the __diffed_samples__ don't seem impressive, but they can display the resuls via HTML, for example, to highlight and clarify the differences:
+In raw form the `diffed_samples` don't seem impressive, but they can display the resuls via HTML, for example, to highlight and clarify the differences:
 
 <table>
 <tr>
