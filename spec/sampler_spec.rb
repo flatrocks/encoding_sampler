@@ -14,9 +14,11 @@ describe Sampler do
           f.puts line
         end
       end
+      @test_sampler = Sampler.new(@filename, %w(US-ASCII UTF-8))
     end
     
-    describe 'verifying fakefs' do
+    describe 'verifying fakefs just to make sure' do
+      # Make sure this works right after all the trouble with home-grown file system stubs!!
       
       it 'can open and readline without error' do
         expect {
@@ -76,8 +78,20 @@ describe Sampler do
       end                
       
     end
+
+    describe "#filename" do
+
+      it 'returns the same filename used to create the instance' do
+        Sampler.new(@filename, []).filename.should eq @filename
+      end
+
+      it 'is read-only' do
+        expect {Sampler.new(@filename, []).filename = 'anything'}.to raise_error NoMethodError
+      end
+
+    end
     
-    describe '#unique_valid_encodings' do
+    describe '#unique_valid_encoding_groups' do
       before(:each) do
         Sampler.any_instance.stub(:decode_binary_string) do |*args|
           if ['ENCODING1', 'LIKE_ENCODING1'].include? args[1]
@@ -87,15 +101,23 @@ describe Sampler do
           end
         end
       end
+
+      it 'is read-only' do
+        expect {Sampler.new(@filename, []).unique_valid_encoding_groups = 'anything'}.to raise_error NoMethodError
+      end
+
+      it 'is frozen' do
+        Sampler.new(@filename, []).unique_valid_encoding_groups.should be_frozen
+      end
       
-      shared_examples 'unique_valid_encodings format is correct' do
+      shared_examples 'unique_valid_encoding_groups format is correct' do
         
         it 'returns an array' do
-          @sampler.unique_valid_encodings.should be_a Array
+          @sampler.unique_valid_encoding_groups.should be_a Array
         end
         
         it 'each array element is an array of strings (encoding names)' do
-          @sampler.unique_valid_encodings.each do |element|
+          @sampler.unique_valid_encoding_groups.each do |element|
             element.should be_a Array
             element.each do |encoding|
               encoding.should be_a String
@@ -104,7 +126,7 @@ describe Sampler do
         end
         
         it 'array elements do not share members with other elements' do
-          @sampler.unique_valid_encodings.flatten.size.should eq @sampler.unique_valid_encodings.flatten.uniq.size
+          @sampler.unique_valid_encoding_groups.flatten.size.should eq @sampler.unique_valid_encoding_groups.flatten.uniq.size
         end
           
       end
@@ -115,14 +137,14 @@ describe Sampler do
           @sampler = Sampler.new(@filename, %w(ENCODING1 LIKE_ENCODING1 UNLIKE_ENCODING1))        
         end
         
-        it_behaves_like 'unique_valid_encodings format is correct'
+        it_behaves_like 'unique_valid_encoding_groups format is correct'
         
         it 'returns all encodings in a single array element' do
-          @sampler.unique_valid_encodings.count.should eq 1
+          @sampler.unique_valid_encoding_groups.count.should eq 1
         end
         
         it 'contains all valid encodings' do
-          @sampler.unique_valid_encodings.flatten.size.should eq 3
+          @sampler.unique_valid_encoding_groups.flatten.size.should eq 3
         end
        
       end
@@ -132,14 +154,14 @@ describe Sampler do
           @sampler = Sampler.new(@filename, %w(ENCODING1 LIKE_ENCODING1))
         end
         
-        it_behaves_like 'unique_valid_encodings format is correct'      
+        it_behaves_like 'unique_valid_encoding_groups format is correct'      
         
         it 'returns all encodings in a single array element' do
-          @sampler.unique_valid_encodings.count.should eq 1
+          @sampler.unique_valid_encoding_groups.count.should eq 1
         end
           
         it 'the single array element contains all valid encodings' do
-          @sampler.unique_valid_encodings[0].should eq %w(ENCODING1 LIKE_ENCODING1)
+          @sampler.unique_valid_encoding_groups[0].should eq %w(ENCODING1 LIKE_ENCODING1)
         end
   
       end
@@ -149,25 +171,33 @@ describe Sampler do
           @sampler = Sampler.new(@filename, %w(ENCODING1 UNLIKE_ENCODING1))
         end
         
-        it_behaves_like 'unique_valid_encodings format is correct'      
+        it_behaves_like 'unique_valid_encoding_groups format is correct'      
         
         it 'returns all encodings in two array elements' do
-          @sampler.unique_valid_encodings.count.should eq 2
+          @sampler.unique_valid_encoding_groups.count.should eq 2
         end
           
         it 'the first array element contains one of the valid encodings' do
-          %w(ENCODING1 UNLIKE_ENCODING1).should include @sampler.unique_valid_encodings[0][0]
+          %w(ENCODING1 UNLIKE_ENCODING1).should include @sampler.unique_valid_encoding_groups[0][0]
         end      
         
         it 'the second array element contains one of the valid encodings' do
-          %w(ENCODING1 UNLIKE_ENCODING1).should include @sampler.unique_valid_encodings[1][0]
+          %w(ENCODING1 UNLIKE_ENCODING1).should include @sampler.unique_valid_encoding_groups[1][0]
         end      
         
         it 'the array elements contains all valid encodings' do
-          @sampler.unique_valid_encodings.flatten.sort.should eq %w(ENCODING1 UNLIKE_ENCODING1).sort
+          @sampler.unique_valid_encoding_groups.flatten.sort.should eq %w(ENCODING1 UNLIKE_ENCODING1).sort
         end
               
       end
+    end
+
+    describe '#valid_encodings' do
+
+      it 'should contain all encodings in unique_valid_encoding_groups' do
+        @test_sampler.valid_encodings.sort.should eq @test_sampler.unique_valid_encodings.flatten.sort
+      end
+
     end
    
     describe '#sample' do
@@ -316,7 +346,75 @@ describe Sampler do
       end      
       
     end
-    
+
+    describe '#best_encodings' do
+      before(:each) do
+       Sampler.any_instance.stub(:decode_binary_string) do |*args|
+          case args[1]
+          when 'SHORTEST_ENCODING' then args[0]
+          when 'LIKE_SHORTEST_ENCODING' then args[0].reverse # same length and different is all that matters
+          when 'INVALID_ENCODING' then nil
+          else args[0].gsub(/t/, 'T&#') # force longer faked encoding for letter 't'
+          end
+        end
+      end
+      
+      context 'no valid encodings' do
+        before(:each) do
+          @sampler = Sampler.new(@filename, %w(INVALID_ENCODING))  
+        end
+        it 'returns empty array' do
+          @sampler.best_encodings.should eq []
+        end
+      end
+      
+      context 'one valid encoding' do
+        before(:each) do
+          @sampler = Sampler.new(@filename, %w(SHORTEST_ENCODING))  
+        end
+        it 'returns an array with the one shortest encoding' do 
+          @sampler.best_encodings.should eq ['SHORTEST_ENCODING']
+        end
+      end      
+            
+      context 'when one shortest encoding' do
+        before(:each) do
+          @sampler = Sampler.new(@filename, %w(SHORTEST_ENCODING LONGER_ENCODING))  
+        end
+        it 'returns an array with the one shortest encoding' do
+          @sampler.best_encodings.should eq ['SHORTEST_ENCODING']
+        end
+      end
+      
+      context 'when more than one shortest encoding' do
+        before(:each) do
+          @sampler = Sampler.new(@filename, %w(SHORTEST_ENCODING LIKE_SHORTEST_ENCODING LONGER_ENCODING))  
+        end
+        it 'returns an array with the shortest encodings' do
+          @sampler.best_encodings.should eq ['SHORTEST_ENCODING', 'LIKE_SHORTEST_ENCODING']
+        end
+      end
+            
+    end   
+
+    describe '#unique_samples' do
+
+      it 'should return a Hash' do
+        @test_sampler.unique_samples.should be_a Hash
+      end
+
+      it 'should have keys equal to first item from each valid_encoding_group' do
+        @test_sampler.unique_samples.keys.should eq @test_sampler.unique_valid_encoding_groups.collect {|group| group.first}
+      end
+
+      it 'should provide the right sample value for each key' do
+        @test_sampler.unique_samples.keys.each do |encoding|
+          @test_sampler.unique_samples[encoding].should eq @test_sampler.sample(encoding)
+        end
+      end
+
+    end
+
     describe 'diffed_sample' do
       before(:each) do
         Sampler.any_instance.stub(:decode_binary_string) do |*args|
@@ -351,7 +449,7 @@ describe Sampler do
         @sampler.diffed_sample('ENCODING1').should_not eq @sampler.diffed_sample('UNLIKE_ENCODING1')
       end
     
-   end    
+    end    
    
     describe 'diffed_samples' do
       before(:each) do
@@ -403,57 +501,25 @@ describe Sampler do
         
       end
     
-    end  
-    
-    describe '#best_encodings' do
-      before(:each) do
-       Sampler.any_instance.stub(:decode_binary_string) do |*args|
-          case args[1]
-          when 'SHORTEST_ENCODING' then args[0]
-          when 'LIKE_SHORTEST_ENCODING' then args[0].reverse # same length and different is all that matters
-          when 'INVALID_ENCODING' then nil
-          else args[0].gsub(/t/, 'T&#') # force longer faked encoding for letter 't'
-          end
+    end    
+
+    describe '#unique_diffed_samples' do
+
+      it 'should return a Hash' do
+        @test_sampler.unique_diffed_samples.should be_a Hash
+      end
+
+      it 'should have keys equal to first item from each valid_encoding_group' do
+        @test_sampler.unique_diffed_samples.keys.should eq @test_sampler.unique_valid_encoding_groups.collect {|group| group.first}
+      end
+
+      it 'should provide the right sample value for each key' do
+        @test_sampler.unique_diffed_samples.keys.each do |encoding|
+          @test_sampler.unique_diffed_samples[encoding].should eq @test_sampler.diffed_samples[encoding]
         end
       end
-      
-      context 'no valid encodings' do
-        before(:each) do
-          @sampler = Sampler.new(@filename, %w(INVALID_ENCODING))  
-        end
-        it 'returns empty array' do
-          @sampler.best_encodings.should eq []
-        end
-      end
-      
-      context 'one valid encoding' do
-        before(:each) do
-          @sampler = Sampler.new(@filename, %w(SHORTEST_ENCODING))  
-        end
-        it 'returns an array with the one shortest encoding' do 
-          @sampler.best_encodings.should eq ['SHORTEST_ENCODING']
-        end
-      end      
-            
-      context 'when one shortest encoding' do
-        before(:each) do
-          @sampler = Sampler.new(@filename, %w(SHORTEST_ENCODING LONGER_ENCODING))  
-        end
-        it 'returns an array with the one shortest encoding' do
-          @sampler.best_encodings.should eq ['SHORTEST_ENCODING']
-        end
-      end
-      
-      context 'when more than one shortest encoding' do
-        before(:each) do
-          @sampler = Sampler.new(@filename, %w(SHORTEST_ENCODING LIKE_SHORTEST_ENCODING LONGER_ENCODING))  
-        end
-        it 'returns an array with the shortest encodings' do
-          @sampler.best_encodings.should eq ['SHORTEST_ENCODING', 'LIKE_SHORTEST_ENCODING']
-        end
-      end
-            
-    end     
-  
+
+    end
+
   end 
 end
