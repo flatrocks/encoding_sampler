@@ -1,5 +1,9 @@
 # master
 
+## 0.3.1 / 2013-3-19
+
+* Relaxed dependency on dff-lcs version.
+
 ## 0.3.0 / 2013-3-19
 
 * Deprecated #unique_valid_encodings, changed name to #unique_valid_encoding_groups for clarity

@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
   s.rdoc_options      = %w(--line-numbers --inline-source --title encoding_sampler --main README.md)
   s.extra_rdoc_files  = %w(README.md CHANGELOG.md LICENSE)  
 
-  s.add_dependency('diff-lcs', '1.1.3')
+  s.add_dependency('diff-lcs', '~>1.1')
 
   s.add_development_dependency("rake")
   s.add_development_dependency("debugger")
