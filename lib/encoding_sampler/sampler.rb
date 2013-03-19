@@ -3,39 +3,64 @@ require 'encoding_sampler/diff_callbacks'
 require 'diff-lcs'
 
 module EncodingSampler
-  
-  class Sampler
+
+    # @!attribute [r] filename
+    # @!attribute [r] unique_valid_encoding_groups    
+    class Sampler
     
-    attr_accessor :filename, :unique_valid_encodings
-    
-    # All valid encodings.  
+    # Full name of the target file used to create the sample.
+    # @return [String]    
+    attr_reader :filename
+
+    # Groups of valid encoding names, such that the encodings in a group all result in the same decoding for the target file.
+    # @example When ISO-8859-1 and ISO-8859-2 decode the target file in exactly the same way, but unlike ISO-8859-15, 
+    #   [["ISO-8859-1", 'ISO-8859-2'], ["ISO-8859-15"]]
+    # @return [Array]
+    attr_reader :unique_valid_encoding_groups
+
+    # Attribute renamed for clarity.
+    # @deprecated Use {#unique_valid_encoding_groups} instead.
+    def unique_valid_encodings
+      unique_valid_encoding_groups
+    end
+
+    # All valid encodings.
+    # @return [Array] Names of encodings that return valid results for the entire file. 
     def valid_encodings
-      unique_valid_encodings.flatten
+      unique_valid_encoding_groups.flatten
     end
     
-    # An array of sample file lines, decoded by _encoding_
+    # Sample file lines, decoded by _encoding_.
+    # @return [Array]
     def sample(encoding)
       @binary_samples.values.map {|line| decode_binary_string(line, encoding)}
     end
     
     # Returns a hash of samples, keyed by encoding
+    # @return [Hash]
     def samples(encodings = valid_encodings)
       encodings.inject({}) {|hash, encoding| hash.merge! encoding => sample(encoding)}
     end
     
-    # Assumes shortest strings are most likely to be correct
+    # Returns all the "best" encodings. Assumes shortest strings are most likely to be correct. 
+    # @return [Array]
     def best_encodings
-      candidates = samples(unique_valid_encodings.collect {|encoding_group| encoding_group.first})
+      candidates = samples(unique_valid_encoding_groups.collect {|encoding_group| encoding_group.first})
       min_length = candidates.values.collect {|ary| ary.join('').size}.min
       candidates.keys.select {|key| candidates[key].join('').size == min_length}
     end
     
-    # "unique" because multiple encodings often return the exact same samples, so only return the unique ones.
+    # Multiple encodings often return the exact same decoded sample.
+    # Return only unique samples, keyed on the first encoding to return each sample.
     # What's first in each grouping is based on original order of encodings give to the constructor.
+    # @return [Array]
     def unique_samples
-      samples(unique_valid_encodings.collect {|encoding_group| encoding_group.first})
+      samples(unique_valid_encoding_groups.collect {|encoding_group| encoding_group.first})
     end
     
+    # Decoded sample, diffed against __all__ of the samples, and marked up to show differences.
+    # @param [String] encoding
+    # @return [String]
     def diffed_sample(encoding)
       diffed_encoded_samples[encoding]
     end
@@ -44,8 +69,9 @@ module EncodingSampler
       encodings.inject({}) {|hash, encoding| hash.merge! encoding => diffed_sample(encoding)}
     end
   
+    # @ (see #unique_samples) Samples are diffed 
     def unique_diffed_samples
-      diffed_samples(unique_valid_encodings.collect {|encoding_group| encoding_group.first})
+      diffed_samples(unique_valid_encoding_groups.collect {|encoding_group| encoding_group.first})
     end
   
   private
@@ -53,8 +79,8 @@ module EncodingSampler
     def initialize(file_name, encodings, diff_options = {})
       @diff_options = diff_options
       @filename = file_name.freeze
-      @unique_valid_encodings, @binary_samples, solutions = [], {}, {}
- 
+      @unique_valid_encoding_groups, @binary_samples, solutions = [], {}, {}
+
       solutions = {}
       encodings.sort.combination(2).to_a.each {|pair| solutions[pair] = nil}
       
@@ -71,20 +97,20 @@ module EncodingSampler
             @binary_samples.keep_if {|id, string| solutions.keys.flatten.include? id}
           end        
           
-          # add sample_id to solutions when smaple sample when binary string decodes differently for two encodings
+          # add sample to solutions when binary string decodes differently for any two previously-undifferentiated encodings
           solutions.select {|pair, lineno| lineno.nil?}.keys.each do |unsolved_pair|
             solutions[unsolved_pair], @binary_samples[file.lineno] = file.lineno, binary_line if decoded_lines[unsolved_pair[0]] != decoded_lines[unsolved_pair[1]]
           end
         end
       end
       
-      # combine to groups
+      # group undifferentiated encodings
       (solutions.select {|pair, lineno| lineno.nil?}.keys + encodings.collect {|encoding| [encoding]}).each do |subgroup|
-        group_index = @unique_valid_encodings.index {|group| !(group & subgroup).empty?}
-        group_index ? @unique_valid_encodings[group_index] |= subgroup : @unique_valid_encodings << subgroup
+        group_index = @unique_valid_encoding_groups.index {|group| !(group & subgroup).empty?}
+        group_index ? @unique_valid_encoding_groups[group_index] |= subgroup : @unique_valid_encoding_groups << subgroup
       end   
       
-      @unique_valid_encodings = @unique_valid_encodings.each {|group| group.freeze}.freeze
+      @unique_valid_encoding_groups = @unique_valid_encoding_groups.each {|group| group.freeze}.freeze
       @binary_samples.freeze
     end
     
