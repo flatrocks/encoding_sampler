@@ -6,8 +6,8 @@ EncodingSampler extracts a concise set of samples from the selected file for dis
 
 For a given file, some encodings may be dismissed out of hand because they would result in invalid
 characters or sequences.  However, in the general case you have to let the user see the differences and choose.
-For example, it's easy to determine that an 8-bit character is _not_ encoded as US_ASCII because it is simply invalid, 
-but it's impossible to tell whether the character __0xA4__ should be displayed as a 
+For example, it's easy to determine that an 8-bit character is _not_ encoded as US_ASCII because it is simply invalid,
+but it's impossible to tell whether the character __0xA4__ should be displayed as a
 generic currency symbol (&curren;) using ISO-8859-1 or as a Euro symbol (&euro;) using ISO-8859-15
 without asking the user.
 
@@ -44,7 +44,7 @@ Or install it yourself as:
 Creating a new EncodingSampler instantiates a new instance and completes the file analysis.
 
 ```ruby
-    EncodingSampler.new(file_name, options = {}}
+    sampler = EncodingSampler::Sampler.new(file_name, options = {}}
 
     # options:
     #  :difference_start => inserted into the diffed samples to mark the start of a "different" section
@@ -55,11 +55,11 @@ Once you have an instance of an EncodingSampler, you can use the object's instan
 
 ```ruby
     sampler = EncodingSampler::Sampler.new(
-      'some/file/name.csv', 
+      'some/file/name.csv',
       ['ASCII-8BIT', 'UTF-8', 'ISO-8859-1', 'ISO-8859-2', 'ISO-8859-15'])
 
     sampler.valid_encodings
-            # ["ASCII-8BIT", "ISO-8859-1", "ISO-8859-2", "ISO-8859-15"] 
+            # ["ASCII-8BIT", "ISO-8859-1", "ISO-8859-2", "ISO-8859-15"]
     sampler.unique_valid_encoding_groups
             # [["ASCII-8BIT"], ["ISO-8859-1", 'ISO-8859-2'], ["ISO-8859-15"]]
 
@@ -70,19 +70,19 @@ Once you have an instance of an EncodingSampler, you can use the object's instan
     sampler.sample('ISO-8859-15')
             # ["€ABCDEFabcdef0123456789€ABCDEFabcdef0123456789€"]
     sampler.samples(["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"])
-            # {"ASCII-8BIT"=>["?ABCDEFabcdef0123456789?ABCDEFabcdef0123456789?"], 
-            #   "ISO-8859-1"=>["¤ABCDEFabcdef0123456789¤ABCDEFabcdef0123456789¤"], 
+            # {"ASCII-8BIT"=>["?ABCDEFabcdef0123456789?ABCDEFabcdef0123456789?"],
+            #   "ISO-8859-1"=>["¤ABCDEFabcdef0123456789¤ABCDEFabcdef0123456789¤"],
             #   "ISO-8859-15"=>["€ABCDEFabcdef0123456789€ABCDEFabcdef0123456789€"]}
 
     sampler.diffed_samples(["ASCII-8BIT", "ISO-8859-1", "ISO-8859-15"])
-            # {"ASCII-8BIT"=>["<span class=\"difference\">?</span>ABCDEFabcdef0123456789<span class=\"difference\">?</span>ABCDEFabcdef0123456789<span class=\"difference\">?</span>"], 
-            #   "ISO-8859-1"=>["<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>"], 
+            # {"ASCII-8BIT"=>["<span class=\"difference\">?</span>ABCDEFabcdef0123456789<span class=\"difference\">?</span>ABCDEFabcdef0123456789<span class=\"difference\">?</span>"],
+            #   "ISO-8859-1"=>["<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>ABCDEFabcdef0123456789<span class=\"difference\">¤</span>"],
             #   "ISO-8859-15"=>["<span class=\"difference\">€</span>ABCDEFabcdef0123456789<span class=\"difference\">€</span>ABCDEFabcdef0123456789<span class=\"difference\">€</span>"]}
 ```
 Notes:
 
 * Valid encodings don't include UTF-8, indicating it was invalid for one or more lines in the file
-* Results show that ISO-8859-1 and ISO-8859-2 decoded the sample file exactly the same, so they are grouped together in 
+* Results show that ISO-8859-1 and ISO-8859-2 decoded the sample file exactly the same, so they are grouped together in
 the unique_valid_encoding_groups.
 
 In raw form the `diffed_samples` don't seem impressive, but they can display the resuls via HTML, for example, to highlight and clarify the differences.
